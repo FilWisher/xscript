@@ -21,33 +21,33 @@ directory.
 Using the CLI to record a session:
 
 ```
-~/s/g/f/xscript $ xscript -F /tmp/foo
+$ xscript -F /tmp/foo
 xscript: started, output file is /tmp/foo-1791288301
-● ~/s/g/f/xscript $ echo "hello"
+● $ echo "hello"
 hello
-● ~/s/g/f/xscript $ exit
+● $ exit
 exit
 xscript: done, output file is /tmp/foo-1791288301
 ```
 
 Using the CLI to record a session with remote control enabled:
 ```
-~/s/g/f/xscript $ xscript -F /tmp/foo -s
+$ xscript -F /tmp/foo -s
 xscript: started, output file is /tmp/foo-1791288477, remote socket is /tmp/foo-1791288477.socket
-● ~/s/g/f/xscript $ echo hello
+● $ echo hello
 hello
-● ~/s/g/f/xscript $ exit
+● $ exit
 xscript: done, output file is /tmp/foo-1791288477
 ```
 
 Remote controlling a session over Unix socket using netcat:
 ```
-~/s/g/f/xscript $ nc -U /tmp/foo-1791288527.socket
+$ nc -U /tmp/foo-1791288527.socket
 ls /tmp/foo-*
 ls /tmp/foo-*
 /tmp/foo-1791288301  /tmp/foo-1791288527
 /tmp/foo-1791288477  /tmp/foo-1791288527.socket
-● ~/s/g/f/xscript $ exit
+● $ exit
 exit
 ```
 
@@ -61,4 +61,23 @@ records, _ := xscript.ReadRecords(f)
 // Replay parses the commands, output, and exit codes by replays the recordings
 // in a headless virtual terminal 
 cmds := xscript.Replay("/tmp/foo-1791288301", records, xscript.ReplayOptions{})
+```
+
+## CLI usage
+
+```
+$ xscript --help
+Usage of xscript:
+  -F <recordfile>
+    	Specify the <recordfile> in which to record. (default "typescript")
+  -a	Append the output to file or typescript, retaining prior contents.
+  -d	When playing back a session with the -p flag, do not sleep between records when playing back a timestamped session.
+  -e	The child command exit status is always the exit status of the script.
+  -l <logfile>
+    	The <logfile> in which to log errors.
+  -p <file>
+    	Play back a session in real time from <file>.
+  -s	Enable remote control via <recordfile>.socket (use -socket to override).
+  -socket <path>
+    	Specify the <path> of the unix socket for remote control. Implies -s.
 ```

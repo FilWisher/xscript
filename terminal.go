@@ -456,6 +456,7 @@ func (s stampWriter) Write(buf []byte) (n int, err error) {
 
 type Options struct {
 	PlayFile string
+	DisablePlayDelay bool
 	Append bool
 	File string
 	Cmd []string

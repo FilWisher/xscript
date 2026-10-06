@@ -18,18 +18,23 @@ import (
 
 func run() (*xscript.Output, error) {
 	var options xscript.Options
-	flag.StringVar(&options.File, "F", options.Default().File, "Specify the filename in which to record.")
+	flag.StringVar(&options.File, "F", options.Default().File, "Specify the `<recordfile>` in which to record.")
 	flag.BoolVar(&options.Append, "a", options.Default().Append, "Append the output to file or typescript, retaining prior contents.")
-	flag.BoolVar(&options.Remote, "s", options.Default().Remote, "Enable remote control over unix socket.")
-	flag.StringVar(&options.SocketFile, "socket", options.Default().SocketFile, "Specify the path of the unix socket for remote control. Implies -s. Defaults to `<recordfile>.socket`.")
+	flag.BoolVar(&options.Remote, "s", options.Default().Remote, "Enable remote control via <recordfile>.socket (use -socket to override).")
+	flag.StringVar(&options.SocketFile, "socket", options.Default().SocketFile, "Specify the `<path>` of the unix socket for remote control. Implies -s.")
 	flag.BoolVar(&options.UseChildExit, "e", options.Default().UseChildExit, "The child command exit status is always the exit status of the script.")
-	flag.StringVar(&options.ErrorLogFile, "l", options.Default().ErrorLogFile, "The file in which to log errors.")
-	flag.StringVar(&options.PlayFile, "p", options.Default().PlayFile, "Play back a session in real time from file.")
+	flag.StringVar(&options.ErrorLogFile, "l", options.Default().ErrorLogFile, "The `<logfile>` in which to log errors.")
+	flag.StringVar(&options.PlayFile, "p", options.Default().PlayFile, "Play back a session in real time from `<file>`.")
+	flag.BoolVar(&options.DisablePlayDelay, "d", options.Default().DisablePlayDelay, "When playing back a session with the -p flag, do not sleep between records when playing back a timestamped session.")
 	flag.Parse()
 
 	options.Cmd = flag.Args()
 
 	ctx := context.Background()
+
+	if options.DisablePlayDelay && options.PlayFile == "" {
+		return nil, errors.New("-d must be used in combination with -p")
+	}
 
 	if options.PlayFile != "" {	
 		err := replay(options)
@@ -73,7 +78,9 @@ func replay(options xscript.Options) error {
 		due := record.Time
 		delta := time.Since(start)
 		wait := due.Sub(origStart.Add(delta))
-		<-time.After(max(wait, 0))
+		if !options.DisablePlayDelay {
+			<-time.After(max(wait, 0))
+		}
 		os.Stdout.Write(record.Data)
 	}
 
