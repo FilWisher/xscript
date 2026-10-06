@@ -455,7 +455,7 @@ func (s stampWriter) Write(buf []byte) (n int, err error) {
 }
 
 type Options struct {
-	Play bool
+	PlayFile string
 	Append bool
 	File string
 	Cmd []string
@@ -471,7 +471,6 @@ func (o Options) Default() Options {
 		shell = "/bin/sh"
 	}
 	return Options{
-		Play: false,
 		Append: false,
 		File: "typescript",
 		Cmd: []string{shell},

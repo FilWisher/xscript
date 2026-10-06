@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"github.com/filwisher/xscript"
 )
@@ -22,13 +24,61 @@ func run() (*xscript.Output, error) {
 	flag.StringVar(&options.SocketFile, "socket", options.Default().SocketFile, "Specify the path of the unix socket for remote control. Implies -s. Defaults to `<recordfile>.socket`.")
 	flag.BoolVar(&options.UseChildExit, "e", options.Default().UseChildExit, "The child command exit status is always the exit status of the script.")
 	flag.StringVar(&options.ErrorLogFile, "l", options.Default().ErrorLogFile, "The file in which to log errors.")
+	flag.StringVar(&options.PlayFile, "p", options.Default().PlayFile, "Play back a session in real time from file.")
 	flag.Parse()
 
 	options.Cmd = flag.Args()
 
 	ctx := context.Background()
 
-	return xscript.Run(ctx, options)
+	if options.PlayFile != "" {	
+		err := replay(options)
+		return nil, err
+	}
+
+	out, err := xscript.Run(ctx, options)
+	if out != nil {
+		log.Printf("done, output file is %s", out.File)
+	}
+	return out, err
+}
+
+func replay(options xscript.Options) error {
+	file, err := os.Open(options.PlayFile)
+	if err != nil {
+		return err
+	}
+	records, err := xscript.ReadRecords(file)
+	if err != nil {
+		return err
+	}
+
+	if len(records) == 0 {
+		return errors.New("no records found")
+	}
+
+	if records[0].Direction != 's' {
+		return errors.New("bad format: expected initial start record")
+	}
+
+	origStart := records[0].Time
+	records = records[1:]
+
+	log.Printf("starting replay")
+	start := time.Now()
+	for _, record := range records {
+		if record.Direction != 'o' {
+			continue
+		}
+		due := record.Time
+		delta := time.Since(start)
+		wait := due.Sub(origStart.Add(delta))
+		<-time.After(max(wait, 0))
+		os.Stdout.Write(record.Data)
+	}
+
+	log.Printf("finished replay")
+	return nil
 }
 
 func main() {
@@ -36,10 +86,6 @@ func main() {
 	log.SetPrefix("xscript: ")
 
 	out, err := run()
-	if out != nil {
-		log.Printf("done, output file is %s", out.File)
-	}
-
 	if out != nil && out.Options.UseChildExit {
 		if err != nil {
 			log.Println(err)
